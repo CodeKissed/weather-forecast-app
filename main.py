@@ -3,25 +3,38 @@ import plotly.express as px
 from backend import get_data
 
 
+# Add title, text input, slider, selectbox and subheader
 st.title("Weather Forecast for Next Days")
 place = st.text_input("Place: ")
 days = st.slider("Forecast Days", min_value=1, max_value=5,
                  help ="Select the number of forecasted days.")
 option = st.selectbox("Select data to view",
                       ("Temperature","Sky"))
-
 st.subheader(f"{option} for the next {days} days in {place.title()}")
 
-data = get_data(place, days, option)
+if place:
+    # Get the temperature/sky data
+    try:
+        filtered_data = get_data(place,days)
 
-def get_data(days):
-    dates =["2024-10-10", "2024-10-11", "2024-10-12"]
-    temperatures =[10, 15, 12]
-    temperatures = [days * i for i in temperatures]
-    return dates,temperatures
+        if option == "Temperature":
+            temperatures = [dict["main"]["temp"] for dict in filtered_data]
+            dates = [dict["dt_txt"] for dict in filtered_data]
+            # Create a temperature plot
+            figure = px.line(x=dates, y=temperatures, labels ={"x": "Date", "y": "Temperature (C)"})
+            st.plotly_chart(figure)
 
-d, t = get_data(days)
+        if option == "Sky":
+            images = {"Clear": "images/clear.png", "Clouds": "images/cloud.png",
+                      "Rain": "images/rain.png", "Snow": "images/snow.png"}
+            sky_timestamp = [dict["dt_txt"] for dict in filtered_data]
+            sky_conditions = [dict["weather"][0]["main"] for dict in filtered_data]
+            image_paths = [images[condition] for condition in sky_conditions]
+            print(sky_conditions)
+            print(sky_timestamp)
 
-figure = px.line(x=d, y=t, labels ={"x": "Date", "y": "Temperature (C)"})
-st.plotly_chart(figure)
+            st.image(image_paths, caption=sky_timestamp, use_container_width=False, width = 115)
 
+
+    except KeyError:
+        st.write("The place does not exist. Please check the spelling.")
